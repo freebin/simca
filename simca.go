@@ -37,8 +37,6 @@ func IOLoop() {
         var key, val string
         args := strings.Split(text, " ")
 
-        fmt.Printf("CMD is '%s'\n", args[0])
-
         switch args[0] {
             case "set":
                 if len(args) < 3 {
@@ -63,6 +61,15 @@ func IOLoop() {
 
             case "len":
                 fmt.Printf("Data length is %d\n", len(keys_hashmap))
+                break
+
+            case "dump":
+                for key, elem := range keys_hashmap {
+                    fmt.Printf("%s -> %s\n", key, (*elem).val)
+                }
+                break
+
+            case "":
                 break
 
             case "exit":
