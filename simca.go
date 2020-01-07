@@ -10,12 +10,17 @@ import (
 type Elem struct {
     key string
     val string
+    prev *Elem
+    next *Elem
 }
 
-var data []Elem
+var first_elem_pointer *Elem = nil
+var last_elem_pointer *Elem = nil
+var keys_hashmap map[string]*Elem
 
 func main() {
     fmt.Printf("Starting S.I.M.C.A.\n")
+    keys_hashmap = make(map[string]*Elem)
 
     IOLoop()
 
@@ -57,7 +62,7 @@ func IOLoop() {
                 break;
 
             case "len":
-                fmt.Printf("Data length is %d\n", len(data))
+                fmt.Printf("Data length is %d\n", len(keys_hashmap))
                 break
 
             case "exit":
@@ -70,30 +75,33 @@ func IOLoop() {
 }
 
 func set(key string, val string) {
-    var exists_on_index int = getIndexByKey(key)
-    if exists_on_index == -1 {
-        data = append(data, Elem{key, val})
+    var existing_elem_pointer *Elem = find(key)
+    if existing_elem_pointer == nil {
+        var new_elem Elem = Elem{key, val, nil, nil}
+        if last_elem_pointer == nil {
+            first_elem_pointer = &new_elem
+            last_elem_pointer = &new_elem
+        } else {
+            (*last_elem_pointer).next = &new_elem
+            new_elem.prev = last_elem_pointer
+            last_elem_pointer = &new_elem
+        }
+        keys_hashmap[key] = &new_elem
     } else {
-        data[exists_on_index] = Elem{key, val}
+        (*existing_elem_pointer).val = val
     }
 }
 
 func get(key string) string {
     // TODO: Distinguish NOT FOUND vs EMPTY STRING
-    var exists_on_index int = getIndexByKey(key)
-    if exists_on_index == -1 {
+    var existing_elem_pointer *Elem = find(key)
+    if existing_elem_pointer == nil {
         return ""
     } else {
-        return data[exists_on_index].val
+        return (*existing_elem_pointer).val
     }
 }
 
-func getIndexByKey(key string) int {
-    for i := 0; i < len(data); i++ {
-        if data[i].key == key {
-            return i;
-        }
-    }
-
-    return -1;
+func find(key string) *Elem {
+    return keys_hashmap[key]
 }
