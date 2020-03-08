@@ -56,13 +56,9 @@ func storeToFile() bool {
 }
 
 func set(key string, val string) {
-	var existingElem Elem = find(key)
-	if existingElem.Key == "" {
-		var new_elem Elem = Elem{key, val}
-		keysHashmap[key] = new_elem
-	} else {
-		existingElem.Val = val
-	}
+	//var existingElem Elem = find(key)
+	var new_elem Elem = Elem{key, val}
+	keysHashmap[key] = new_elem
 
 	storeToFile()
 }
@@ -77,6 +73,7 @@ func get(key string) (string, bool) {
 }
 
 func find(key string) Elem {
+	//TODO: Better use link
 	return keysHashmap[key]
 }
 
