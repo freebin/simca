@@ -1,39 +1,82 @@
 package main
 
-import "fmt"
+import (
+	"encoding/gob"
+	"fmt"
+	"io"
+	"os"
+)
 
 type Elem struct {
-	key string
-	val string
+	Key string
+	Val string
 }
 
-var keysHashmap map[string]*Elem
+const permFilePath = "/tmp/simca.gob"
+
+var keysHashmap map[string]Elem
 
 func initStorage() bool {
-	keysHashmap = make(map[string]*Elem)
+	permFile, err := os.OpenFile(permFilePath, os.O_RDONLY|os.O_CREATE, 0600)
+	if err != nil {
+		fmt.Printf("Failed to read datafile: %s!\n", err)
+		return false
+	}
+	defer permFile.Close()
+
+	decoder := gob.NewDecoder(permFile)
+	err = decoder.Decode(&keysHashmap)
+	if err == io.EOF {
+		keysHashmap = make(map[string]Elem)
+	} else if err != nil {
+		fmt.Printf("Failed to import datafile: %s!\n", err)
+		return false
+	}
+
+	// TODO: Save to file from time to time
+
+	return true
+}
+
+func storeToFile() bool {
+	permFile, err := os.OpenFile(permFilePath, os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		fmt.Printf("Failed to open datafile: %s!\n", err)
+		return false
+	}
+	defer permFile.Close()
+
+	encoder := gob.NewEncoder(permFile)
+	err = encoder.Encode(keysHashmap)
+	if err != nil {
+		fmt.Printf("Failed to write datafile: %s!\n", err)
+	}
+
 	return true
 }
 
 func set(key string, val string) {
-	var existingElemPointer *Elem = find(key)
-	if existingElemPointer == nil {
+	var existingElem Elem = find(key)
+	if existingElem.Key == "" {
 		var new_elem Elem = Elem{key, val}
-		keysHashmap[key] = &new_elem
+		keysHashmap[key] = new_elem
 	} else {
-		(*existingElemPointer).val = val
+		existingElem.Val = val
 	}
+
+	storeToFile()
 }
 
 func get(key string) (string, bool) {
-	var existing_elem_pointer *Elem = find(key)
-	if existing_elem_pointer == nil {
+	var existingElem Elem = find(key)
+	if existingElem.Key == "" {
 		return "", false
 	}
 
-	return (*existing_elem_pointer).val, true
+	return existingElem.Val, true
 }
 
-func find(key string) *Elem {
+func find(key string) Elem {
 	return keysHashmap[key]
 }
 
@@ -42,13 +85,13 @@ func countEntries() int {
 }
 
 func flushStorage() {
-	keysHashmap = make(map[string]*Elem)
+	keysHashmap = make(map[string]Elem)
 }
 
 func printFullList() string {
 	var dump string
 	for key, elem := range keysHashmap {
-		dump += fmt.Sprintf("%s -> %s\n", key, (*elem).val)
+		dump += fmt.Sprintf("%s -> %s\n", key, elem.Val)
 	}
 	return dump
 }
