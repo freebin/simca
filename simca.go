@@ -4,15 +4,32 @@ import (
     "fmt"
     "net"
     "strings"
+    "time"
 )
 
+type InternalStats struct {
+    StartTime uint
+    NumConnections uint
+    NumGetRequests uint
+    NumGetHits uint
+    NumSetRequests uint
+    NumSetHits uint
+    NumKeysFromStorage uint
+}
+
+var stats InternalStats
+
 func main() {
+    stats.StartTime = uint(time.Now().Unix())
+
     fmt.Printf("Starting S.I.M.C.A.\n")
     res := initStorage()
     if !res {
         fmt.Printf("Failed to init storage!\n")
         return
     }
+
+    stats.NumKeysFromStorage = uint(countEntries())
 
     //IOLoop()
     TCPLoop()
@@ -44,6 +61,8 @@ func handleRequest(conn net.Conn) {
     var text, key, val, response_str string
     var response []byte
 
+    stats.NumConnections++
+
     IOLoop:
     for {
         request := make([]byte, 65536)
@@ -72,8 +91,12 @@ func handleRequest(conn net.Conn) {
                 key = args[1]
                 val = strings.Join(args[2:], " ")
 
-                set(key, val)
+                _, found := set(key, val)
+                if found {
+                    stats.NumSetHits++
+                }
                 response_str = fmt.Sprintf("OK\n")
+                stats.NumSetRequests++
                 break
 
             case "get":
@@ -85,13 +108,23 @@ func handleRequest(conn net.Conn) {
                 val, found := get(key)
                 if found {
                     response_str = fmt.Sprintf("Data at key '%s' is '%s'\n", key, val)
+                    stats.NumGetHits++
                 } else {
                     response_str = fmt.Sprintf("Data at key '%s' is not found\n", key)
                 }
+                stats.NumGetRequests++
                 break
 
-            case "len":
-                response_str = fmt.Sprintf("Data length is %d\n", countEntries())
+            case "stats":
+                response_str = ""
+                response_str += fmt.Sprintf("StartTime: %d\n", stats.StartTime)
+                response_str += fmt.Sprintf("NumKeysFromStorage: %d\n", stats.NumKeysFromStorage)
+                response_str += fmt.Sprintf("DataLength: %d\n", countEntries())
+                response_str += fmt.Sprintf("NumConnections: %d\n", stats.NumConnections)
+                response_str += fmt.Sprintf("NumGetRequests: %d\n", stats.NumGetRequests)
+                response_str += fmt.Sprintf("NumGetHits: %d\n", stats.NumGetHits)
+                response_str += fmt.Sprintf("NumSetRequests: %d\n", stats.NumSetRequests)
+                response_str += fmt.Sprintf("NumSetHits: %d\n", stats.NumSetHits)
                 break
 
             case "flush":
